@@ -1,0 +1,17 @@
+{
+  "name": "arma3-devbuilds-notifier",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
+  },
+  "author": "LoboArdiente",
+  "license": "ISC",
+  "dependencies": {
+    "discord-webhook-node": "^1.1.8",
+    "fs": "^0.0.1-security",
+    "puppeteer": "^21.5.0"
+  }
+}
