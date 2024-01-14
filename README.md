@@ -1,18 +1,21 @@
-# Arma 3 dev builds notifier
-A very basic program to extract info about new dev builds posts from https://forums.bohemia.net/forums/topic/140837-development-branch-changelog/
+# Arma 3 Development Branch Changelog Notifier
 
-> The idea of the program is that it runs in a cronjob so each time it detects a new message u receive a notification
+This Node.js script scrapes information from the [Arma 3 Development Branch Changelog](https://forums.bohemia.net/forums/topic/140837-development-branch-changelog/). It checks if the last post ID is the same as the one stored in the configuration file. If there's a new post, it sends a formatted Discord webhook message using Markdown.
 
-# Usage
-**Install dependencies with**
-```
-npm install
-```
-> Configure your discord webhook url on the file config.json
+### Installation
 
-**Run using**
-```
-npm start
-```
-# TODO
-- Improve the way the content is displayed
+1. Clone the repo
+
+   ```sh
+   git clone https://github.com/LoboArdiente/arma3-devbuilds-notifier.git
+   ```
+2. Install NPM packages
+
+   ```sh
+   npm install
+   ```
+3. Enter your discord webhook url `config.json`
+
+   ```js
+   "webhook_url": 'ENTER YOUR WEBHOOK';
+   ```

@@ -1,40 +1,47 @@
 const puppeteer = require('puppeteer');
+const fs = require('fs');
 const { Webhook, MessageBuilder } = require('discord-webhook-node');
-let {webhook_url, base_url, current_page, last_comment} = require ("./config.json")
+let {webhook_url, current_page, last_comment} = require ("./config.json")
 
 const hook = new Webhook(webhook_url);
-const fs = require('fs');
+const BASE_URL = "https://forums.bohemia.net/forums/topic/140837-development-branch-changelog/"
+
+let nextPageRestart = false
 
 async function getArticleInfo() {
-    const browser = await puppeteer.launch({headless: "new"});
+    const browser = await puppeteer.launch({ headless: "new" });
     const page = await browser.newPage();
-    const lastPage = base_url + `?page=${current_page}`
+    const lastPageStored = BASE_URL + `?page=${current_page}`
 
-    await page.goto(lastPage);
+    await page.goto(lastPageStored);
 
     let data = await page.evaluate(() => {
         let articles = document.querySelectorAll("article");
         let articles_count = articles.length;
         let last_article = articles.item(articles_count - 1);
+        let lastPageAvailable = document.querySelector(".ipsPagination").getAttribute("data-pages");
 
         let comment_id = last_article.id.replace("elComment_","")
-        return [ articles_count, comment_id ]
+        return [ articles_count, comment_id, lastPageAvailable ]
     });
 
-    [articles_count, actual_comment] = data;
+    const [articles_count, actual_comment, lastPageAvailable] = data;
+
+    current_page = lastPageAvailable
 
     // If last comment stored isequalto actual last comment then exit
     if (last_comment == actual_comment) {
-        console.log("Exiting.. there is no new builds released")
+        console.log("Exiting.. there is no new dev builds released")
 
         await browser.close()
         return;
     }
 
-    // Check if we have to move to the next page
-    if (articles_count == 25) {
-        console.log("Max articles reeched updating page and retrying...")
+    // Check if we have to move to the next page and check if we didnt restart already
+    if (articles_count == 25 && !nextPageRestart) {
+        console.log("Max articles reach going to next page and retrying...")
         current_page += 1
+        nextPageRestart = true
 
         getArticleInfo()
         await browser.close()
@@ -54,16 +61,39 @@ async function getArticleInfo() {
         let author_img = author_aside.querySelector(".cAuthorPane_info .cAuthorPane_photo img").src
 
         // get Content info
-        let content = article.querySelector(".ipsType_normal.ipsType_richText.ipsContained").textContent
+        let content = ""
+        const articleContent = article.querySelector(".ipsType_normal.ipsType_richText.ipsContained")
+        const lists = articleContent.querySelectorAll("ul")
+        let headers = [...articleContent.querySelectorAll("p:has(> strong)")]
+        let binaryInfoElement = headers.shift()
 
-        return [author, author_img, content]
+        const date = binaryInfoElement.querySelector("strong").textContent
+        const binaryInfo = binaryInfoElement.querySelector("em").textContent
+
+        content += `**${date}**\n*${binaryInfo}*\n\n`;
+
+        for (let index = 0; index < headers.length; index++) {
+            const header = headers[index];
+            const list = [...lists[index].querySelectorAll("li")].map(li => li.innerText);
+
+            content += `### ${header.textContent}\n`;
+            list.forEach(change => content += `- ${change}\n`);
+        }
+
+        return {
+            author: {
+                name: author,
+                avatar: author_img
+            },
+            content
+        }
     }, actual_comment);
 
-    [author, author_img, content] = data;
+    ({author, content} = data);
 
-    const article_url = lastPage + `#comment-${actual_comment}`;
+    const article_url = lastPageStored + `#comment-${actual_comment}`;
 
-    sendWebHook({author, author_img, content, article_url})
+    sendWebHook({author, content, article_url})
     await browser.close()
 }
 
@@ -91,16 +121,17 @@ async function updateConfig(actual_page, actual_comment) {
     });
 }
 
-function sendWebHook({author, author_img, content, article_url}) {
+function sendWebHook({author, content, article_url}) {
     const embed = new MessageBuilder()
     .setTitle('New Dev Build Released')
-    .setAuthor(author, author_img)
+    .setAuthor(author.name, author.avatar)
     .setURL(article_url)
     .setColor('#FFA500')
-    .setDescription(content + `\n[Go to the article](${article_url})`)
+    .setDescription(content)
     .setTimestamp();
 
     hook.send(embed);
+    console.log("Webhook Sent");
 }
 
 getArticleInfo();
