@@ -19,3 +19,6 @@ This Node.js script scrapes information from the [Arma 3 Development Branch Chan
    ```js
    "webhook_url": 'ENTER YOUR WEBHOOK';
    ```
+### Example
+
+![](https://i.gyazo.com/80c4a476c367a4536f15c716fe272207.png)
